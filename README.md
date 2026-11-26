@@ -5,6 +5,7 @@ Les données restent sur le téléphone (aucun serveur, aucun compte).
 
 ## Fonctions
 - Ajouter, modifier ou supprimer des dépenses et des revenus (catégorie, date, note)
+- Opérations récurrentes (chaque mois ou chaque semaine), ajoutées automatiquement
 - Solde, revenus et dépenses du mois, avec navigation entre les mois
 - Budget mensuel avec barre de progression
 - Statistiques : répartition par catégorie, moyenne par jour, comparaison avec le mois précédent

@@ -48,6 +48,14 @@
     </label>
     <div id="fCats" class="cats" role="radiogroup" aria-label="Catégorie"></div>
     <label class="field">Date<input type="date" id="fDate" required></label>
+    <label class="field" id="fRepeatWrap">Répéter
+      <select id="fRepeat">
+        <option value="">Non, une seule fois</option>
+        <option value="monthly">Chaque mois</option>
+        <option value="weekly">Chaque semaine</option>
+      </select>
+      <small id="fRepeatHint" class="field-hint"></small>
+    </label>
     <label class="field">Note<input id="fNote" maxlength="80" placeholder="Ex : courses du samedi"></label>
     <div class="actions">
       <button type="button" id="fDelete" class="btn danger" hidden>Supprimer</button>

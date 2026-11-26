@@ -69,10 +69,14 @@ function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY));
     if (raw && Array.isArray(raw.tx)) {
-      return { tx: raw.tx, settings: { ...DEFAULT_SETTINGS, ...raw.settings } };
+      return {
+        tx: raw.tx,
+        recurring: Array.isArray(raw.recurring) ? raw.recurring : [],
+        settings: { ...DEFAULT_SETTINGS, ...raw.settings },
+      };
     }
   } catch (_) { /* données illisibles : on repart de zéro */ }
-  return { tx: [], settings: { ...DEFAULT_SETTINGS } };
+  return { tx: [], recurring: [], settings: { ...DEFAULT_SETTINGS } };
 }
 
 function save() {
@@ -80,6 +84,7 @@ function save() {
 }
 
 let state = load();
+let pendingToast = null; // message à afficher au prochain affichage (ex. après déverrouillage)
 const view = {
   month: monthKey(new Date()),
   tab: 'list',
@@ -162,6 +167,7 @@ function render() {
   if (view.tab === 'list') renderList();
   if (view.tab === 'stats') renderStats();
   if (view.tab === 'settings') renderSettings();
+  if (pendingToast) { toast(pendingToast); pendingToast = null; }
 }
 
 function renderSummary() {
@@ -210,13 +216,20 @@ function renderList() {
       html += `
         <button class="tx" data-id="${t.id}">
           <span class="bubble" style="background:${c.color}22">${c.icon}</span>
-          <span class="info"><b>${escapeHtml(c.name)}</b>${t.note ? `<small>${escapeHtml(t.note)}</small>` : ''}</span>
+          <span class="info"><b>${escapeHtml(c.name)}</b>${txSubtitle(t)}</span>
           <span class="amt ${isIn ? 'in' : ''}">${fmt(isIn ? t.amount : -t.amount, true)}</span>
         </button>`;
     }
     html += '</div>';
   }
   $('#tab-list').innerHTML = html;
+}
+
+function txSubtitle(t) {
+  const parts = [];
+  if (t.recurringId) parts.push('🔁 Récurrent');
+  if (t.note) parts.push(escapeHtml(t.note));
+  return parts.length ? `<small>${parts.join(' · ')}</small>` : '';
 }
 
 function donutSvg(parts, total) {
@@ -301,6 +314,27 @@ function renderSettings() {
       </div>
     </div>
     <div class="card">
+      <h3>Opérations récurrentes</h3>
+      ${state.recurring.length ? state.recurring
+        .slice().sort((a, b) => a.next.localeCompare(b.next))
+        .map((r) => {
+          const c = findCat(r.type, r.category);
+          const isIn = r.type === 'income';
+          return `
+            <div class="rec-row">
+              <span class="bubble" style="background:${c.color}22;width:36px;height:36px;font-size:1.05rem">${c.icon}</span>
+              <span class="info">
+                <b>${escapeHtml(c.name)}${r.note ? ` · ${escapeHtml(r.note)}` : ''}</b>
+                <small>${describeRule(r)} · prochaine : ${shortDate(r.next)}</small>
+              </span>
+              <span class="amt ${isIn ? 'in' : ''}">${fmt(isIn ? r.amount : -r.amount, true)}</span>
+              <button class="btn danger small" data-stop="${r.id}">Arrêter</button>
+            </div>`;
+        }).join('') : `
+        <p class="hint">Aucune pour l'instant. Pour en créer une (loyer, abonnement, salaire…),
+          ajoute une opération avec <b>+</b> et choisis « Répéter : chaque mois ».</p>`}
+    </div>
+    <div class="card">
       <h3>Sécurité</h3>
       ${pinData ? `
         <p class="hint">🔒 Code PIN activé : il est demandé à chaque ouverture de l'appli.</p>
@@ -341,6 +375,77 @@ function renderSettings() {
     </div>`;
 }
 
+/* ---------- Opérations récurrentes ---------- */
+
+// Une règle = { id, type, amount, category, note, freq: 'monthly' | 'weekly', day, next }
+// « next » est la date de la prochaine opération à créer. À chaque ouverture de l'appli,
+// toutes les opérations dont la date est arrivée sont ajoutées (y compris celles manquées).
+
+function parseIso(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function advanceRule(r) {
+  const d = parseIso(r.next);
+  if (r.freq === 'weekly') {
+    r.next = isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7));
+  } else {
+    // même jour le mois suivant ; le 31 devient le 30 (ou le 28/29) si le mois est plus court
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 2, 0).getDate();
+    r.next = isoDate(new Date(d.getFullYear(), d.getMonth() + 1, Math.min(r.day, lastDay)));
+  }
+}
+
+function applyRecurring() {
+  const today = isoDate(new Date());
+  let added = 0;
+  for (const r of state.recurring) {
+    let guard = 0;
+    while (r.next <= today && guard++ < 500) {
+      state.tx.push({
+        id: uid(), created: Date.now() + added,
+        type: r.type, amount: r.amount, category: r.category,
+        date: r.next, note: r.note, recurringId: r.id,
+      });
+      added++;
+      advanceRule(r);
+    }
+  }
+  if (added) save();
+  return added;
+}
+
+function describeRule(r, nextIso = r.next) {
+  if (r.freq === 'weekly') {
+    return `Chaque ${parseIso(nextIso).toLocaleDateString('fr-FR', { weekday: 'long' })}`;
+  }
+  return `Chaque mois, le ${r.day === 1 ? '1er' : r.day}`;
+}
+
+function shortDate(iso) {
+  return parseIso(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+}
+
+function updateRepeatHint() {
+  const freq = $('#fRepeat').value;
+  const date = $('#fDate').value;
+  $('#fRepeatHint').textContent = freq && date
+    ? `${describeRule({ freq, day: parseIso(date).getDate() }, date)}, à partir du ${shortDate(date)}`
+    : '';
+}
+
+function stopRecurring(id) {
+  const r = state.recurring.find((x) => x.id === id);
+  if (!r) return;
+  const name = findCat(r.type, r.category).name;
+  if (!confirm(`Arrêter « ${name}${r.note ? ' – ' + r.note : ''} » ?\n\nLes opérations déjà ajoutées restent dans ta liste.`)) return;
+  state.recurring = state.recurring.filter((x) => x.id !== id);
+  save();
+  render();
+  toast('Opération récurrente arrêtée');
+}
+
 /* ---------- Formulaire ---------- */
 
 function renderCats() {
@@ -367,6 +472,9 @@ function openForm(tx = null) {
   $('#fDate').value = tx ? tx.date
     : (view.month === monthKey(today) ? isoDate(today) : `${view.month}-01`);
   view.formCat = tx ? tx.category : null;
+  $('#fRepeatWrap').hidden = !!tx; // la répétition se choisit seulement à la création
+  $('#fRepeat').value = '';
+  updateRepeatHint();
   setFormType(tx ? tx.type : 'expense');
   $('#backdrop').hidden = false;
   $('#sheet').hidden = false;
@@ -398,6 +506,19 @@ function submitForm(e) {
     const t = state.tx.find((x) => x.id === view.editingId);
     Object.assign(t, data);
     toast('Opération modifiée');
+  } else if ($('#fRepeat').value) {
+    // Opération récurrente : on crée la règle, puis on ajoute celles dont la date est arrivée
+    const rule = {
+      id: uid(), ...data,
+      freq: $('#fRepeat').value,
+      day: parseIso(data.date).getDate(),
+      next: data.date,
+    };
+    state.recurring.push(rule);
+    applyRecurring();
+    toast(rule.next !== data.date
+      ? 'Opération récurrente créée'
+      : `Opération récurrente programmée pour le ${shortDate(data.date)}`);
   } else {
     state.tx.push({ id: uid(), created: Date.now(), ...data });
     toast(data.type === 'income' ? 'Revenu ajouté' : 'Dépense ajoutée');
@@ -509,7 +630,11 @@ function restore(file) {
       if (!data || !Array.isArray(data.tx)) throw new Error('format');
       const valid = data.tx.filter((t) => t && t.id && t.date && typeof t.amount === 'number' && CATEGORIES[t.type]);
       if (!confirm(`Remplacer tes données actuelles par cette sauvegarde (${valid.length} opérations) ?`)) return;
-      state = { tx: valid, settings: { ...DEFAULT_SETTINGS, ...data.settings } };
+      const recurring = Array.isArray(data.recurring)
+        ? data.recurring.filter((r) => r && r.id && r.next && typeof r.amount === 'number' && CATEGORIES[r.type])
+        : [];
+      state = { tx: valid, recurring, settings: { ...DEFAULT_SETTINGS, ...data.settings } };
+      applyRecurring();
       save();
       render();
       toast('Sauvegarde restaurée');
@@ -729,6 +854,8 @@ $('#backdrop').addEventListener('click', closeForm);
 $('#fCancel').addEventListener('click', closeForm);
 $('#fDelete').addEventListener('click', deleteTx);
 $('#sheet').addEventListener('submit', submitForm);
+$('#fRepeat').addEventListener('change', updateRepeatHint);
+$('#fDate').addEventListener('change', updateRepeatHint);
 
 document.querySelector('.bottom').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-tab]');
@@ -778,6 +905,8 @@ $('#tab-settings').addEventListener('change', (e) => {
 });
 
 $('#tab-settings').addEventListener('click', (e) => {
+  const stop = e.target.closest('[data-stop]');
+  if (stop) return stopRecurring(stop.dataset.stop);
   const id = e.target.closest('button')?.id;
   if (id === 'sPinOn') setupPin();
   if (id === 'sPinChange') askCurrentPin(setupPin);
@@ -785,8 +914,9 @@ $('#tab-settings').addEventListener('click', (e) => {
   if (id === 'sExportCsv') exportCsv();
   if (id === 'sBackup') backup();
   if (id === 'sRestore') $('#importFile').click();
-  if (id === 'sReset' && confirm('Effacer TOUTES les opérations ? Cette action est définitive.')) {
+  if (id === 'sReset' && confirm('Effacer TOUTES les opérations (et les opérations récurrentes) ? Cette action est définitive.')) {
     state.tx = [];
+    state.recurring = [];
     save(); render();
     toast('Toutes les données ont été effacées');
   }
@@ -826,6 +956,23 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ---------- Démarrage ---------- */
+
+// Si l'appli reste ouverte d'un jour à l'autre, on vérifie les récurrentes en revenant dessus.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  const n = applyRecurring();
+  if (n) {
+    pendingToast = recurringMessage(n);
+    if (!locked) render(); // si l'appli est verrouillée, le message s'affichera après le code PIN
+  }
+});
+
+function recurringMessage(n) {
+  return n === 1 ? '1 opération récurrente ajoutée' : `${n} opérations récurrentes ajoutées`;
+}
+
+const addedAtStart = applyRecurring();
+if (addedAtStart) pendingToast = recurringMessage(addedAtStart);
 
 if (pinData) lockApp();
 else render();

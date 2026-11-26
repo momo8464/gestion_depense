@@ -22,13 +22,15 @@ function renderSummary() {
     : '';
   $('#summary').innerHTML = `
     <div class="label">Solde du mois</div>
-    <div class="balance ${t.balance < 0 ? 'out' : ''}">${fmt(t.balance)}</div>
+    <div class="balance ${t.balance < 0 ? 'out' : ''}" id="sumBalance">${fmt(t.balance)}</div>
     <div class="split">
-      <div><span class="label">Revenus</span><strong class="in">${fmt(t.income)}</strong></div>
-      <div><span class="label">Dépenses</span><strong class="out">${fmt(t.expense)}</strong></div>
+      <div><span class="label">Revenus</span><strong class="in" id="sumIncome">${fmt(t.income)}</strong></div>
+      <div><span class="label">Dépenses</span><strong class="out" id="sumExpense">${fmt(t.expense)}</strong></div>
     </div>
     ${budgetHtml}
     ${accountsLine}`;
+  animateSummary(t);
+  updateMini(t);
 }
 
 /* ---------- Recherche et filtres ---------- */
@@ -159,6 +161,7 @@ function renderList() {
       <div class="list">${items.map(txRow).join('')}</div>`;
   }
   $('#listBody').innerHTML = html;
+  highlightFresh();
 }
 
 function initList() {

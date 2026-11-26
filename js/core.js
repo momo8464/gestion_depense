@@ -158,6 +158,7 @@ const view = {
   q: '',                  // recherche
   filter: { type: '', cat: '', account: '', period: 'month' },
   open: new Set(),        // sections dépliées dans Réglages
+  stamp: null,            // objectif qui vient d'être atteint (tampon animé)
   editingId: null,
   formType: 'expense',
   formCat: null,

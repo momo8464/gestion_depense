@@ -38,6 +38,11 @@ Idée directrice : « papier et encre ». La carte du solde est imprimée comme 
 à empattements, comme dans un livre de comptes. La couleur porte du sens : vert = entrées,
 rouille = sorties, or = ton argent et tes objectifs. Seules les polices du téléphone sont utilisées
 (rien à télécharger, l'appli reste légère et marche hors connexion).
+
+Mouvements, chacun en réponse à quelque chose : le billet s'incline avec le téléphone avec un reflet
+holographique, le solde défile jusqu'à sa nouvelle valeur, la nouvelle opération est mise en évidence,
+un tampon « Atteint ! » s'imprime sur un objectif réussi, et un mini-billet reste visible en haut
+quand on fait défiler la liste. Tout est coupé si le téléphone demande de réduire les animations.
 - Proposition d'installation à chaque ouverture dans le navigateur
 
 ## Lancer sur le PC
@@ -62,6 +67,7 @@ Puis ouvre http://localhost:5173 dans le navigateur.
   - `photos.js` : stockage des photos de tickets
   - `dialog.js` : fenêtre de saisie réutilisable
   - `install.js` : proposition d'installation
+  - `motion.js` : animations (billet qui s'incline, compteur du solde, tampon, mini-billet)
   - `main.js` : affichage général, navigation et démarrage (chargé en dernier)
 - `manifest.webmanifest`, `sw.js` : installation sur le téléphone et mode hors ligne
 - `icons/` : icônes (régénérables avec `node tools/make-icons.js`)

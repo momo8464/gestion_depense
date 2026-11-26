@@ -164,9 +164,27 @@ main { max-width: 560px; margin: 0 auto; padding: 0 14px; }
   /* lignes gravées */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='30' viewBox='0 0 240 30'%3E%3Cg fill='none' stroke='white' stroke-opacity='.06' stroke-width='1'%3E%3Cpath d='M0 15 C30 0 90 30 120 15 S210 0 240 15'/%3E%3Cpath d='M0 5 C30 -10 90 20 120 5 S210 -10 240 5'/%3E%3Cpath d='M0 25 C30 10 90 40 120 25 S210 10 240 25'/%3E%3C/g%3E%3C/svg%3E");
 }
+/* le billet s'incline avec le téléphone (valeurs calculées dans js/motion.js) */
+.summary {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  will-change: transform;
+}
+/* reflet holographique, comme la bande de sécurité d'un billet */
+.summary::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg,
+    transparent 32%,
+    rgba(255, 232, 160, .20) 42%,
+    rgba(170, 225, 255, .16) 48%,
+    rgba(255, 190, 230, .14) 54%,
+    transparent 64%);
+  background-size: 260% 100%;
+  background-position: var(--holo, 50%) 0;
+  mix-blend-mode: screen;
+}
 /* rosace dorée, comme un motif de sécurité */
 .summary::after {
-  content: ''; position: absolute; z-index: -1;
+  content: ''; position: absolute; z-index: -2;
   right: -70px; top: -60px; width: 230px; height: 230px;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-100 -100 200 200'%3E%3Cg fill='none' stroke='%23e3c77a' stroke-opacity='.32' stroke-width='.7'%3E%3Ccircle r='97'/%3E%3Ccircle r='93'/%3E%3Ccircle r='30'/%3E%3Cellipse rx='90' ry='28'/%3E%3Cellipse rx='90' ry='28' transform='rotate(15)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(30)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(45)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(60)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(75)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(90)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(105)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(120)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(135)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(150)'/%3E%3Cellipse rx='90' ry='28' transform='rotate(165)'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
 }
@@ -545,6 +563,62 @@ details.card[open] summary { margin-bottom: 8px; }
   z-index: 40; width: max-content; max-width: calc(100% - 32px); text-align: center;
   background: var(--text); color: var(--paper); padding: 10px 16px; border-radius: 12px; font-size: .9rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .2);
+}
+
+/* ---------- Mouvements (voir js/motion.js) ---------- */
+
+/* Mini-billet : apparaît sous le mois quand la carte du solde sort de l'écran */
+.top { position: sticky; }
+.mini-note {
+  position: absolute; left: 14px; right: 14px; top: calc(100% - 4px);
+  display: flex; align-items: baseline; gap: 10px;
+  border: 0; text-align: left;
+  background-color: var(--ink); color: var(--on-ink);
+  border-radius: 14px; padding: 8px 14px;
+  box-shadow: inset 0 0 0 1px rgba(227, 199, 122, .22), 0 8px 20px rgba(0, 0, 0, .18);
+  opacity: 0; transform: translateY(-8px); pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.top.show-mini .mini-note { opacity: 1; transform: none; pointer-events: auto; }
+.mini-note > span { color: var(--on-ink-muted); font-size: .8rem; }
+.mini-note b { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; font-variant-numeric: lining-nums tabular-nums; }
+.mini-note b.neg { color: var(--on-ink-out); }
+.mini-note small { margin-left: auto; display: flex; gap: 10px; font-family: var(--serif); font-size: .85rem; font-variant-numeric: lining-nums tabular-nums; }
+.mini-note .in { color: var(--on-ink-in); }
+.mini-note .out { color: var(--on-ink-out); }
+
+/* Nouvelle opération mise en évidence */
+@keyframes fresh {
+  0% { opacity: 0; transform: translateY(-8px); background: var(--brand-soft); }
+  18% { opacity: 1; transform: none; background: var(--brand-soft); }
+  100% { background: transparent; }
+}
+.tx.fresh { animation: fresh 1.8s ease-out; }
+
+/* Barres qui se remplissent à l'affichage */
+@keyframes grow { from { transform: scaleX(0); } }
+.cb-row .bar i, .goal .bar i, .hbar i {
+  transform-origin: left center;
+  animation: grow .8s cubic-bezier(.2, .7, .2, 1) both;
+}
+
+/* Tampon « Atteint ! » / « Soldé » */
+.goal { position: relative; }
+.stamp {
+  position: absolute; top: 12px; right: 14px;
+  font-family: var(--serif); font-weight: 700; font-size: 1.05rem; letter-spacing: .03em;
+  color: var(--green); border: 2.5px solid currentColor; border-radius: 8px;
+  padding: 1px 10px; transform: rotate(-10deg); opacity: .9;
+}
+.stamp.inline {
+  position: static; display: inline-block; font-size: .78rem; border-width: 1.5px;
+  padding: 0 6px; transform: rotate(-4deg); margin-right: 4px;
+}
+.stamp-in { animation: stamp .5s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes stamp {
+  0% { transform: rotate(-10deg) scale(2.4); opacity: 0; }
+  55% { opacity: .95; }
+  100% { transform: rotate(-10deg) scale(1); opacity: .9; }
 }
 
 /* ---------- Relevé imprimable (PDF) ---------- */

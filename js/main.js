@@ -92,6 +92,7 @@ initPlus();
 initSettings();
 initSecurity();
 initInstall();
+initMotion();
 initMain();
 
 const addedAtStart = applyRecurring();

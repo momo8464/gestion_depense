@@ -16,6 +16,10 @@
     <button class="icon-btn" id="prevMonth" aria-label="Mois précédent">‹</button>
     <h1 id="monthLabel"></h1>
     <button class="icon-btn" id="nextMonth" aria-label="Mois suivant">›</button>
+    <!-- Mini-billet affiché quand la carte du solde sort de l'écran (voir js/motion.js) -->
+    <button id="miniNote" class="mini-note" type="button" aria-label="Revenir en haut">
+      <span>Solde</span><b id="miniBalance"></b><small id="miniSplit"></small>
+    </button>
   </header>
 
   <main>
@@ -190,6 +194,7 @@
   <script src="js/settings.js"></script>
   <script src="js/security.js"></script>
   <script src="js/install.js"></script>
+  <script src="js/motion.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

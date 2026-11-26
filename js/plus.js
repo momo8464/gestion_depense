@@ -14,6 +14,7 @@ function subHead(title, extra = '') {
 function renderPlus() {
   const pages = { accounts: accountsPage, goals: goalsPage, debts: debtsPage, year: yearPage };
   $('#tab-plus').innerHTML = (pages[view.sub] || plusMenu)();
+  view.stamp = null; // le tampon ne s'anime qu'une fois
 }
 
 function plusMenu() {
@@ -150,13 +151,14 @@ function goalsPage() {
     }
     return `
       <div class="card goal ${done ? 'done' : ''}">
+        ${done ? `<span class="stamp ${view.stamp === g.id ? 'stamp-in' : ''}" aria-hidden="true">Atteint !</span>` : ''}
         <div class="goal-head">
           <span class="bubble sm">${g.icon}</span>
           <span class="info"><b>${escapeHtml(g.name)}</b><small>${fmt(g.saved)} sur ${fmt(g.target)}</small></span>
-          <span class="pct-big">${pct} %</span>
+          ${done ? '' : `<span class="pct-big">${pct} %</span>`}
         </div>
         <div class="bar ${done ? 'ok' : ''}"><i style="width:${pct}%"></i></div>
-        <small class="goal-plan">${done ? '🎉 Objectif atteint, bravo !' : plan || `Il reste ${fmt(g.target - g.saved)}`}</small>
+        <small class="goal-plan">${done ? 'Objectif atteint, bravo !' : plan || `Il reste ${fmt(g.target - g.saved)}`}</small>
         <div class="row-actions">
           ${done ? '' : `<button class="btn primary small" data-goal-add="${g.id}">+ Ajouter</button>`}
           ${g.saved > 0 ? `<button class="btn ghost small" data-goal-take="${g.id}">− Retirer</button>` : ''}
@@ -224,9 +226,12 @@ async function moveGoal(id, sign) {
   if (!v) return;
   const before = g.saved;
   g.saved = Math.max(0, Math.round((g.saved + sign * v.amount) * 1000) / 1000);
+  const reached = before < g.target && g.saved >= g.target;
+  if (reached) view.stamp = g.id; // le tampon s'imprime sur cet objectif
   save();
   render();
-  toast(before < g.target && g.saved >= g.target ? '🎉 Objectif atteint, bravo !' : `${g.name} : ${fmt(g.saved)} / ${fmt(g.target)}`);
+  if (reached) stampFeedback();
+  toast(reached ? '🎉 Objectif atteint, bravo !' : `${g.name} : ${fmt(g.saved)} / ${fmt(g.target)}`);
 }
 
 /* =====================================================================
@@ -270,7 +275,7 @@ function debtRow(d) {
   const r = debtRemaining(d);
   const done = r <= 0;
   const late = debtLate(d);
-  const status = done ? '✅ Soldé'
+  const status = done ? '<span class="stamp inline">Soldé</span>'
     : d.due ? (late ? `<span class="over-text">⚠️ En retard depuis le ${shortDate(d.due)}</span>` : `À rendre avant le ${shortDate(d.due)}`)
       : `Depuis le ${shortDate(d.date)}`;
   return `

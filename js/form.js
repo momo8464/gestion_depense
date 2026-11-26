@@ -210,6 +210,7 @@ async function saveForm() {
 
   save();
   view.month = data.date.slice(0, 7);
+  if (saved) freshId = saved.id;
   closeForm();
   render();
   toast(budgetAlert(data) || message);
@@ -227,6 +228,7 @@ function quickAddFavorite(id) {
   state.tx.push(t);
   save();
   view.month = t.date.slice(0, 7);
+  freshId = t.id;
   closeForm();
   render();
   toast(budgetAlert(t) || `Ajouté : ${f.note || findCat(f.type, f.category).name} ${fmt(f.amount)}`);

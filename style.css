@@ -184,6 +184,33 @@ main { max-width: 560px; margin: 0 auto; padding: 0 12px; }
 .actions { display: flex; gap: 8px; margin-top: 6px; }
 .actions .primary { flex: 1; }
 
+/* Écran de verrouillage (code PIN) */
+.lock {
+  position: fixed; inset: 0; z-index: 30;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.lock-box { width: 100%; max-width: 320px; text-align: center; }
+.lock-icon { font-size: 2.2rem; }
+.lock h2 { font-size: 1.15rem; margin: 8px 0 4px; }
+.lock-msg { min-height: 1.3em; color: var(--muted); font-size: .9rem; margin: 0 0 18px; }
+.lock-msg.err { color: var(--red); }
+.dots { display: flex; justify-content: center; gap: 16px; margin-bottom: 28px; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); }
+.dots i.on { background: var(--brand); border-color: var(--brand); }
+.dots.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 75% { transform: translateX(-4px); } }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; justify-items: center; }
+.keypad button {
+  width: 72px; height: 72px; border-radius: 50%; border: 0;
+  background: var(--card); box-shadow: var(--shadow);
+  font-size: 1.6rem; font-weight: 500;
+}
+.keypad button:active { background: var(--brand-soft); }
+.keypad .ghost-key { background: none; box-shadow: none; font-size: 1.4rem; }
+.link-btn { margin-top: 22px; border: 0; background: none; color: var(--brand); font-weight: 600; padding: 8px; }
+
 .toast {
   position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%);
   background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; z-index: 20; font-size: .9rem;

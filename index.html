@@ -56,6 +56,30 @@
     </div>
   </form>
 
+  <div id="lock" class="lock" hidden>
+    <div class="lock-box">
+      <div class="lock-icon" aria-hidden="true">🔒</div>
+      <h2 id="lockTitle">Entre ton code PIN</h2>
+      <p id="lockMsg" class="lock-msg" aria-live="polite"></p>
+      <div id="lockDots" class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="keypad" id="keypad">
+        <button type="button" data-key="1">1</button>
+        <button type="button" data-key="2">2</button>
+        <button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button>
+        <button type="button" data-key="5">5</button>
+        <button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button>
+        <button type="button" data-key="8">8</button>
+        <button type="button" data-key="9">9</button>
+        <span></span>
+        <button type="button" data-key="0">0</button>
+        <button type="button" data-key="del" class="ghost-key" aria-label="Effacer">⌫</button>
+      </div>
+      <button type="button" id="lockAlt" class="link-btn"></button>
+    </div>
+  </div>
+
   <div id="toast" class="toast" hidden></div>
   <input type="file" id="importFile" accept="application/json,.json" hidden>
 

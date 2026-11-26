@@ -20,8 +20,36 @@
 
   <main>
     <section id="summary" class="card summary"></section>
-    <section id="tab-list" class="tab"></section>
+
+    <!-- Onglet Opérations -->
+    <section id="tab-list" class="tab">
+      <div class="search">
+        <input id="q" type="search" placeholder="🔍 Rechercher (note, catégorie, montant…)" aria-label="Rechercher une opération" autocomplete="off">
+        <button id="filterBtn" class="icon-btn" aria-label="Filtres" aria-expanded="false" aria-controls="filters">⚙︎</button>
+      </div>
+      <div id="filters" class="card filters" hidden>
+        <label class="field">Type
+          <select id="flType">
+            <option value="">Tous</option>
+            <option value="expense">Dépenses</option>
+            <option value="income">Revenus</option>
+            <option value="transfer">Virements</option>
+          </select>
+        </label>
+        <label class="field">Catégorie<select id="flCat"></select></label>
+        <label class="field" id="flAccWrap">Compte<select id="flAcc"></select></label>
+        <label class="field">Période
+          <select id="flPeriod">
+            <option value="month">Mois affiché</option>
+            <option value="all">Toutes les périodes</option>
+          </select>
+        </label>
+      </div>
+      <div id="listBody"></div>
+    </section>
+
     <section id="tab-stats" class="tab" hidden></section>
+    <section id="tab-plus" class="tab" hidden></section>
     <section id="tab-settings" class="tab" hidden></section>
   </main>
 
@@ -30,23 +58,31 @@
   <nav class="bottom">
     <button data-tab="list" class="active"><span aria-hidden="true">📋</span>Opérations</button>
     <button data-tab="stats"><span aria-hidden="true">📊</span>Statistiques</button>
+    <button data-tab="plus"><span aria-hidden="true">🧰</span>Plus</button>
     <button data-tab="settings"><span aria-hidden="true">⚙️</span>Réglages</button>
   </nav>
 
+  <!-- Formulaire d'ajout / modification -->
   <div id="backdrop" class="backdrop" hidden></div>
-
   <form id="sheet" class="sheet" hidden autocomplete="off">
     <div class="grab"></div>
     <h2 id="sheetTitle">Nouvelle opération</h2>
     <div class="seg">
       <button type="button" data-type="expense" class="active">Dépense</button>
       <button type="button" data-type="income">Revenu</button>
+      <button type="button" data-type="transfer" id="segTransfer">Virement</button>
     </div>
+    <div id="fFavs" class="favs" hidden></div>
     <label class="amount">
       <input id="fAmount" inputmode="decimal" placeholder="0" aria-label="Montant" required>
       <span id="fCurrency"></span>
     </label>
     <div id="fCats" class="cats" role="radiogroup" aria-label="Catégorie"></div>
+    <div id="fTransfer" class="row2" hidden>
+      <label class="field">Depuis<select id="fFrom"></select></label>
+      <label class="field">Vers<select id="fTo"></select></label>
+    </div>
+    <label class="field" id="fAccountWrap">Compte<select id="fAccount"></select></label>
     <label class="field">Date<input type="date" id="fDate" required></label>
     <label class="field" id="fRepeatWrap">Répéter
       <select id="fRepeat">
@@ -57,6 +93,15 @@
       <small id="fRepeatHint" class="field-hint"></small>
     </label>
     <label class="field">Note<input id="fNote" maxlength="80" placeholder="Ex : courses du samedi"></label>
+    <div id="fPhotoWrap" class="photo-field">
+      <button type="button" id="fPhotoBtn" class="btn ghost">📷 Ajouter la photo du ticket</button>
+      <div id="fPhotoPreview" class="photo-preview" hidden>
+        <img id="fPhotoImg" alt="Photo du ticket (toucher pour agrandir)">
+        <button type="button" id="fPhotoRemove" class="btn danger small">Retirer la photo</button>
+      </div>
+      <input type="file" id="fPhotoInput" accept="image/*" hidden>
+    </div>
+    <label class="check" id="fFavWrap"><input type="checkbox" id="fFav"> ⭐ Ajouter aux favoris</label>
     <div class="actions">
       <button type="button" id="fDelete" class="btn danger" hidden>Supprimer</button>
       <button type="button" id="fCancel" class="btn ghost">Annuler</button>
@@ -64,6 +109,25 @@
     </div>
   </form>
 
+  <!-- Fenêtre de saisie réutilisable (voir js/dialog.js) -->
+  <div id="dlgBackdrop" class="backdrop dlg-backdrop" hidden></div>
+  <form id="dlg" class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" hidden autocomplete="off">
+    <h2 id="dlgTitle"></h2>
+    <p id="dlgText" class="hint"></p>
+    <div id="dlgFields"></div>
+    <div class="actions">
+      <button type="button" id="dlgCancel" class="btn ghost">Annuler</button>
+      <button type="submit" id="dlgOk" class="btn primary">Valider</button>
+    </div>
+  </form>
+
+  <!-- Photo du ticket en grand -->
+  <div id="photoView" class="photo-view" hidden>
+    <img id="photoViewImg" alt="Photo du ticket">
+    <button type="button" id="photoClose" class="btn ghost">Fermer</button>
+  </div>
+
+  <!-- Écran du code PIN -->
   <div id="lock" class="lock" hidden>
     <div class="lock-box">
       <div class="lock-icon" aria-hidden="true">🔒</div>
@@ -88,6 +152,7 @@
     </div>
   </div>
 
+  <!-- Proposition d'installation -->
   <div id="installBackdrop" class="backdrop install-backdrop" hidden></div>
   <div id="install" class="install-card" role="dialog" aria-modal="true" aria-labelledby="installTitle" hidden>
     <img src="icons/icon-192.png" alt="" width="64" height="64">
@@ -100,9 +165,25 @@
     </div>
   </div>
 
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" class="toast" role="status" hidden></div>
   <input type="file" id="importFile" accept="application/json,.json" hidden>
 
-  <script src="app.js"></script>
+  <!-- Relevé imprimable (rempli au moment d'imprimer) -->
+  <div id="print"></div>
+
+  <!-- Le code est découpé par fonctionnalité ; l'ordre de chargement compte -->
+  <script src="js/core.js"></script>
+  <script src="js/dialog.js"></script>
+  <script src="js/photos.js"></script>
+  <script src="js/recurring.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/list.js"></script>
+  <script src="js/form.js"></script>
+  <script src="js/plus.js"></script>
+  <script src="js/backup.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/security.js"></script>
+  <script src="js/install.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>

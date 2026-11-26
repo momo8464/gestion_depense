@@ -8,6 +8,8 @@ Les données restent sur le téléphone (aucun serveur, aucun compte).
 - Opérations récurrentes (chaque mois ou chaque semaine), ajoutées automatiquement
 - Solde, revenus et dépenses du mois, avec navigation entre les mois
 - Budget mensuel avec barre de progression
+- Budgets par catégorie, avec alerte à 80 % et en cas de dépassement
+- Graphique d'évolution des revenus et dépenses sur 6 mois
 - Statistiques : répartition par catégorie, moyenne par jour, comparaison avec le mois précédent
 - Code PIN à l'ouverture (optionnel), avec verrouillage automatique en arrière-plan
 - Choix de la devise (€, FCFA, $, DH, DA, DT, CHF, £)

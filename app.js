@@ -7,6 +7,7 @@ const STORE_KEY = 'mes-depenses.v1';
 const DEFAULT_SETTINGS = {
   currency: '€',
   budget: 0,
+  catBudgets: {},    // budget maximum par catégorie de dépense : { food: 150, ... }
   reminderDays: 7,   // rappel de sauvegarde (0 = jamais)
   lastBackup: 0,     // date de la dernière sauvegarde
   backupSnooze: 0,   // « Plus tard » : pas de rappel avant cette date
@@ -206,7 +207,7 @@ function renderList() {
     if (!groups.has(t.date)) groups.set(t.date, []);
     groups.get(t.date).push(t);
   }
-  let html = backupBanner();
+  let html = overBudgetBanner() + backupBanner();
   for (const [date, items] of groups) {
     const dayTotal = totals(items).balance;
     html += `<div class="day"><span>${dayLabel(date)}</span><span>${fmt(dayTotal, true)}</span></div><div class="list">`;
@@ -248,11 +249,151 @@ function donutSvg(parts, total) {
     <circle r="${r}" cx="90" cy="90" fill="none" stroke="var(--line)" stroke-width="${sw}"/>${arcs}</svg>`;
 }
 
+/* ---------- Budgets par catégorie ---------- */
+
+function catBudget(id) {
+  return Number((state.settings.catBudgets || {})[id]) || 0;
+}
+
+function spentByCat(key = view.month) {
+  const m = new Map();
+  for (const t of monthTx(key)) {
+    if (t.type === 'expense') m.set(t.category, (m.get(t.category) || 0) + t.amount);
+  }
+  return m;
+}
+
+function budgetRows(key = view.month) {
+  const spent = spentByCat(key);
+  return CATEGORIES.expense
+    .filter((c) => catBudget(c.id) > 0)
+    .map((c) => {
+      const budget = catBudget(c.id);
+      const s = spent.get(c.id) || 0;
+      return { ...c, budget, spent: s, pct: Math.round((s / budget) * 100) };
+    });
+}
+
+function budgetsCard() {
+  const rows = budgetRows().sort((a, b) => b.pct - a.pct);
+  if (!rows.length) {
+    return `
+      <div class="card">
+        <h3>Budgets par catégorie</h3>
+        <p class="hint">Aucun budget défini. Fixe un maximum par catégorie dans
+          <b>Réglages → Budgets par catégorie</b> (ex. 150 € pour les restaurants).</p>
+      </div>`;
+  }
+  return `
+    <div class="card">
+      <h3>Budgets par catégorie</h3>
+      ${rows.map((r) => {
+        const level = r.pct > 100 ? 'over' : r.pct >= 80 ? 'warn' : '';
+        const status = r.pct > 100
+          ? `⚠️ Dépassé de ${fmt(r.spent - r.budget)}`
+          : r.pct >= 80 ? `⚠️ Presque atteint · reste ${fmt(r.budget - r.spent)}` : `Reste ${fmt(r.budget - r.spent)}`;
+        return `
+          <div class="cb-row">
+            <div class="cb-head"><span>${r.icon} ${r.name}</span><span>${fmt(r.spent)} / ${fmt(r.budget)}</span></div>
+            <div class="bar ${level}"><i style="width:${Math.min(r.pct, 100)}%"></i></div>
+            <small class="${level}">${status} · ${r.pct} %</small>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function overBudgetBanner() {
+  const over = budgetRows().filter((r) => r.pct > 100);
+  if (!over.length) return '';
+  return `
+    <div class="card reminder over-banner" role="status">
+      <div class="reminder-text">
+        <b>⚠️ ${over.length === 1 ? 'Budget dépassé' : `${over.length} budgets dépassés`}</b>
+        <small>${over.map((r) => `${r.icon} ${r.name} (${fmt(r.spent)} / ${fmt(r.budget)})`).join(' · ')}</small>
+      </div>
+      <div class="reminder-actions"><button class="btn ghost" data-action="stats">Voir les budgets</button></div>
+    </div>`;
+}
+
+// Message après l'ajout d'une dépense si elle fait dépasser (ou presque) le budget de sa catégorie
+function budgetAlert(t) {
+  if (t.type !== 'expense') return null;
+  const budget = catBudget(t.category);
+  if (!budget) return null;
+  const spent = spentByCat(t.date.slice(0, 7)).get(t.category) || 0;
+  const name = findCat('expense', t.category).name;
+  const pct = Math.round((spent / budget) * 100);
+  if (spent > budget) return `⚠️ Budget ${name} dépassé : ${fmt(spent)} / ${fmt(budget)}`;
+  if (pct >= 80) return `Attention : ${pct} % du budget ${name} utilisé`;
+  return null;
+}
+
+/* ---------- Graphique d'évolution ---------- */
+
+function barPath(x, base, w, h) {
+  // barre avec les coins du haut arrondis (4 px), posée sur la ligne de base
+  if (h <= 0) return '';
+  const r = Math.min(4, h, w / 2);
+  const y = base - h;
+  return `M${x},${base}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${base}Z`;
+}
+
+function evolutionCard() {
+  const months = [];
+  for (let i = 5; i >= 0; i--) months.push(shiftMonth(view.month, -i));
+  const data = months.map((k) => ({ k, ...totals(monthTx(k)) }));
+  const max = Math.max(0, ...data.map((d) => Math.max(d.income, d.expense)));
+  if (!max) {
+    return `<div class="card"><h3>Évolution sur 6 mois</h3>
+      <p class="hint">Pas encore de données sur les 6 derniers mois.</p></div>`;
+  }
+  const W = 320, base = 130, plotH = 112, groupW = W / 6, barW = 15, gap = 2;
+  const label = (k) => {
+    const [y, m] = k.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+  };
+  let bars = '';
+  data.forEach((d, i) => {
+    const cx = groupW * i + groupW / 2;
+    const hIn = (d.income / max) * plotH;
+    const hOut = (d.expense / max) * plotH;
+    const selected = d.k === view.month;
+    bars += `
+      <g class="evo-group${selected ? ' sel' : ''}" data-month="${d.k}">
+        <title>${monthLabel(d.k)} : revenus ${fmt(d.income)}, dépenses ${fmt(d.expense)}</title>
+        <rect class="evo-hit" x="${groupW * i}" y="0" width="${groupW}" height="${base + 26}"/>
+        <path d="${barPath(cx - barW - gap / 2, base, barW, hIn)}" fill="var(--chart-in)"/>
+        <path d="${barPath(cx + gap / 2, base, barW, hOut)}" fill="var(--chart-out)"/>
+        <text x="${cx}" y="${base + 18}" text-anchor="middle" class="evo-label">${label(d.k)}</text>
+      </g>`;
+  });
+  const sel = data[data.length - 1];
+  const avg = data.reduce((s, d) => s + d.expense, 0) / data.length;
+  return `
+    <div class="card">
+      <h3>Évolution sur 6 mois</h3>
+      <div class="legend">
+        <span><i style="background:var(--chart-in)"></i>Revenus</span>
+        <span><i style="background:var(--chart-out)"></i>Dépenses</span>
+      </div>
+      <svg class="evo" viewBox="0 0 ${W} ${base + 26}" width="100%" role="img"
+        aria-label="Revenus et dépenses des 6 derniers mois">
+        <line x1="0" x2="${W}" y1="${base}" y2="${base}" class="evo-base"/>
+        ${bars}
+      </svg>
+      <p class="evo-detail"><b>${monthLabel(sel.k)}</b> : revenus <b>${fmt(sel.income)}</b> · dépenses <b>${fmt(sel.expense)}</b></p>
+      <p class="hint" style="margin:0">Dépense moyenne : ${fmt(avg)} par mois. Touche un mois pour l'afficher.</p>
+    </div>`;
+}
+
 function renderStats() {
   const list = monthTx().filter((t) => t.type === 'expense');
   const total = list.reduce((s, t) => s + t.amount, 0);
   if (!total) {
-    $('#tab-stats').innerHTML = `<div class="empty"><div>📊</div>Pas encore de dépenses à analyser ce mois-ci.</div>`;
+    $('#tab-stats').innerHTML = `
+      ${budgetsCard()}
+      ${evolutionCard()}
+      <div class="empty" style="padding:24px"><div>📊</div>Pas encore de dépenses ce mois-ci.</div>`;
     return;
   }
   const byCat = new Map();
@@ -289,6 +430,8 @@ function renderStats() {
           <span class="val">${fmt(p.value)}</span>
         </div>`).join('')}
     </div>
+    ${budgetsCard()}
+    ${evolutionCard()}
     <div class="facts">
       <div><small>Moyenne par jour</small><strong>${fmt(total / days)}</strong></div>
       <div><small>vs mois précédent</small><strong>${compare}</strong></div>
@@ -313,6 +456,17 @@ function renderSettings() {
         <input id="sBudget" inputmode="decimal" value="${s.budget || ''}" placeholder="0">
       </div>
     </div>
+    <details class="card budgets-set">
+      <summary><h3>Budgets par catégorie</h3>
+        <span class="hint">${budgetRows().length ? `${budgetRows().length} budget(s) défini(s)` : 'Aucun'} ›</span></summary>
+      <p class="hint">Montant maximum à dépenser par mois dans chaque catégorie. Laisse vide pour ne pas en mettre.</p>
+      ${CATEGORIES.expense.map((c) => `
+        <label class="setting">
+          <span>${c.icon} ${c.name}</span>
+          <input data-catbudget="${c.id}" inputmode="decimal" placeholder="Aucun"
+            value="${catBudget(c.id) ? String(catBudget(c.id)).replace('.', ',') : ''}">
+        </label>`).join('')}
+    </details>
     <div class="card">
       <h3>Opérations récurrentes</h3>
       ${state.recurring.length ? state.recurring
@@ -527,6 +681,8 @@ function submitForm(e) {
   view.month = data.date.slice(0, 7);
   closeForm();
   render();
+  const alert = budgetAlert(data);
+  if (alert) toast(alert);
 }
 
 function deleteTx() {
@@ -936,11 +1092,28 @@ $('#tab-list').addEventListener('click', (e) => {
   const action = e.target.closest('[data-action]')?.dataset.action;
   if (action === 'backup') return backup();
   if (action === 'snooze') return snoozeBackup();
+  if (action === 'stats') { view.tab = 'stats'; render(); window.scrollTo(0, 0); return; }
   const b = e.target.closest('.tx');
   if (b) openForm(state.tx.find((t) => t.id === b.dataset.id));
 });
 
+$('#tab-stats').addEventListener('click', (e) => {
+  const g = e.target.closest('[data-month]');
+  if (g && g.dataset.month !== view.month) { view.month = g.dataset.month; render(); }
+});
+
 $('#tab-settings').addEventListener('change', (e) => {
+  const catId = e.target.dataset.catbudget;
+  if (catId) {
+    const v = parseAmount(e.target.value || '0');
+    state.settings.catBudgets = { ...state.settings.catBudgets };
+    if (v > 0) state.settings.catBudgets[catId] = v;
+    else delete state.settings.catBudgets[catId];
+    save();
+    // pas de render() ici : la liste reste ouverte pour saisir les autres catégories
+    toast(v > 0 ? `Budget ${findCat('expense', catId).name} : ${fmt(v)} par mois` : `Budget ${findCat('expense', catId).name} supprimé`);
+    return;
+  }
   if (e.target.id === 'sCurrency') {
     state.settings.currency = e.target.value;
     save(); render();

@@ -14,6 +14,7 @@ Les données restent sur le téléphone (aucun serveur, aucun compte).
 - Export CSV (Excel), sauvegarde et restauration en fichier .json
 - Rappel de sauvegarde (chaque semaine, 15 jours ou mois), avec « Plus tard »
 - Thème clair ou sombre selon le téléphone
+- Proposition d'installation à chaque ouverture dans le navigateur (masquée une fois l'appli installée)
 
 ## Lancer sur le PC
 ```

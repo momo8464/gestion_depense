@@ -104,6 +104,23 @@ function renderSettings() {
         <input id="sBudget" inputmode="decimal" value="${amountInput(s.budget)}" placeholder="0">
       </div>
     </div>
+    <div class="card">
+      <h3>Apparence</h3>
+      <div class="setting">
+        <span>Thème</span>
+        <select id="sTheme">
+          ${THEMES.map((t) => `<option value="${t.value}" ${t.value === s.theme ? 'selected' : ''}>${t.label}</option>`).join('')}
+        </select>
+      </div>
+      <div class="setting stack">
+        <span>Couleur d'encre : <b>${escapeHtml((INKS.find((i) => i.id === s.ink) || INKS[0]).name)}</b></span>
+        <div class="ink-choices" role="radiogroup" aria-label="Couleur d'encre">
+          ${INKS.map((i) => `<label class="ink-choice" title="${i.name}">
+            <input type="radio" name="ink" value="${i.id}" ${i.id === s.ink ? 'checked' : ''} aria-label="${i.name}">
+            <span style="background:${i.color}"></span></label>`).join('')}
+        </div>
+      </div>
+    </div>
     ${foldCard('budgets', 'Budgets par catégorie', nbBudgets ? `${nbBudgets} défini${nbBudgets > 1 ? 's' : ''}` : 'Aucun', budgetsBody())}
     ${foldCard('cats', 'Catégories', [nbCustom ? `${nbCustom} perso` : '', nbHidden ? `${nbHidden} masquée${nbHidden > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ') || 'Personnaliser', categoriesBody())}
     ${foldCard('favs', 'Favoris', state.favorites.length ? `${state.favorites.length}` : 'Aucun', favoritesBody())}
@@ -235,6 +252,16 @@ function initSettings() {
       // pas de render() ici : la liste reste ouverte pour saisir les autres catégories
       const name = findCat('expense', catId).name;
       toast(v > 0 ? `Budget ${name} : ${fmt(v)} par mois` : `Budget ${name} supprimé`);
+      return;
+    }
+    if (e.target.id === 'sTheme') {
+      state.settings.theme = e.target.value;
+      save(); render();
+      return;
+    }
+    if (e.target.name === 'ink') {
+      state.settings.ink = e.target.value;
+      save(); render();
       return;
     }
     if (e.target.id === 'sCurrency') {

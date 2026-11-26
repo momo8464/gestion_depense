@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#f3f4ef">
   <meta name="description" content="Gestionnaire de dépenses personnel">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
@@ -24,8 +24,10 @@
     <!-- Onglet Opérations -->
     <section id="tab-list" class="tab">
       <div class="search">
-        <input id="q" type="search" placeholder="🔍 Rechercher (note, catégorie, montant…)" aria-label="Rechercher une opération" autocomplete="off">
-        <button id="filterBtn" class="icon-btn" aria-label="Filtres" aria-expanded="false" aria-controls="filters">⚙︎</button>
+        <input id="q" type="search" placeholder="Rechercher une opération…" aria-label="Rechercher une opération (note, catégorie, montant)" autocomplete="off">
+        <button id="filterBtn" class="icon-btn" aria-label="Filtres" aria-expanded="false" aria-controls="filters">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        </button>
       </div>
       <div id="filters" class="card filters" hidden>
         <label class="field">Type
@@ -56,10 +58,14 @@
   <button id="fab" class="fab" aria-label="Ajouter une opération">+</button>
 
   <nav class="bottom">
-    <button data-tab="list" class="active"><span aria-hidden="true">📋</span>Opérations</button>
-    <button data-tab="stats"><span aria-hidden="true">📊</span>Statistiques</button>
-    <button data-tab="plus"><span aria-hidden="true">🧰</span>Plus</button>
-    <button data-tab="settings"><span aria-hidden="true">⚙️</span>Réglages</button>
+    <button data-tab="list" class="active">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Opérations</button>
+    <button data-tab="stats">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/></svg>Statistiques</button>
+    <button data-tab="plus">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><path d="M16.75 14v5.5M14 16.75h5.5"/></svg>Plus</button>
+    <button data-tab="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Réglages</button>
   </nav>
 
   <!-- Formulaire d'ajout / modification -->

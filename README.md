@@ -30,7 +30,14 @@ Les données restent sur le téléphone (aucun serveur, aucun compte).
 - Code PIN à l'ouverture (optionnel), avec verrouillage automatique en arrière-plan
 - Sauvegarde .json (protégée par mot de passe si on veut), restauration, export CSV
 - Rappel de sauvegarde (chaque semaine, 15 jours ou mois), avec « Plus tard »
-- Thème clair ou sombre selon le téléphone
+- Apparence : thème automatique, clair ou sombre, et 5 couleurs d'encre (marine, forêt, prune, océan, ardoise)
+
+## Design
+Idée directrice : « papier et encre ». La carte du solde est imprimée comme un billet de banque
+(encre, lignes gravées, rosace dorée) ; le reste est sobre, et les montants sont composés en caractères
+à empattements, comme dans un livre de comptes. La couleur porte du sens : vert = entrées,
+rouille = sorties, or = ton argent et tes objectifs. Seules les polices du téléphone sont utilisées
+(rien à télécharger, l'appli reste légère et marche hors connexion).
 - Proposition d'installation à chaque ouverture dans le navigateur
 
 ## Lancer sur le PC

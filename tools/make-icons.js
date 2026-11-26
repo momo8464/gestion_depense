@@ -41,18 +41,22 @@ function shade(u, v, rounded) {
     const dy = Math.max(m + r - v, 0, v - (1 - m - r));
     if (dx * dx + dy * dy > r * r) return [0, 0, 0, 0];
   }
+  // fond « encre marine » en léger dégradé
   const t = (u + v) / 2;
-  let col = [15 + (20 - 15) * t, 118 + (184 - 118) * t, 110 + (166 - 110) * t];
-  // portefeuille stylisé : rectangle blanc arrondi + fermoir
+  let col = [29 + 14 * t, 42 + 20 * t, 68 + 30 * t];
+  // fines lignes gravées dorées en arrière-plan, comme sur un billet
+  const wave = Math.abs(((v * 14 + Math.sin(u * Math.PI * 2) * 0.6) % 1) - 0.5);
+  if (wave < 0.035) col = col.map((c, i) => c + ([227, 199, 122][i] - c) * 0.18);
+  // portefeuille stylisé : couleur papier, rabat doré, fermoir encre
   const inRoundRect = (x0, y0, x1, y1, rr) => {
     const cx = Math.min(Math.max(u, x0 + rr), x1 - rr);
     const cy = Math.min(Math.max(v, y0 + rr), y1 - rr);
     return (u - cx) ** 2 + (v - cy) ** 2 <= rr * rr && u >= x0 && u <= x1 && v >= y0 && v <= y1;
   };
-  if (inRoundRect(0.27, 0.30, 0.73, 0.70, 0.06)) col = [255, 255, 255];
-  if (inRoundRect(0.27, 0.30, 0.73, 0.40, 0.05)) col = [204, 251, 241];
-  if (inRoundRect(0.55, 0.46, 0.76, 0.60, 0.05)) col = [15, 118, 110];
-  if ((u - 0.62) ** 2 + (v - 0.53) ** 2 <= 0.025 ** 2) col = [255, 255, 255];
+  if (inRoundRect(0.27, 0.30, 0.73, 0.70, 0.06)) col = [246, 242, 231];
+  if (inRoundRect(0.27, 0.30, 0.73, 0.40, 0.05)) col = [227, 199, 122];
+  if (inRoundRect(0.55, 0.46, 0.76, 0.60, 0.05)) col = [29, 42, 68];
+  if ((u - 0.62) ** 2 + (v - 0.53) ** 2 <= 0.025 ** 2) col = [227, 199, 122];
   return [...col, 255];
 }
 

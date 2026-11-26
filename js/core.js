@@ -8,6 +8,8 @@ const STORE_KEY = 'mes-depenses.v1';
 
 const DEFAULT_SETTINGS = {
   currency: '€',
+  theme: 'auto',      // auto | light | dark
+  ink: 'navy',        // couleur d'encre : navy | forest | plum | ocean | slate
   budget: 0,          // budget mensuel global (0 = aucun)
   catBudgets: {},     // budget maximum par catégorie de dépense : { food: 150, ... }
   hiddenCats: [],     // catégories masquées (ids)
@@ -62,6 +64,21 @@ const CURRENCIES = [
   { symbol: 'DT',   decimals: 3 },
   { symbol: 'CHF',  decimals: 2 },
   { symbol: '£',    decimals: 2 },
+];
+
+// Couleurs d'encre proposées (voir style.css)
+const INKS = [
+  { id: 'navy',   name: 'Marine', color: '#1d2a44' },
+  { id: 'forest', name: 'Forêt',  color: '#1e3b32' },
+  { id: 'plum',   name: 'Prune',  color: '#3a2340' },
+  { id: 'ocean',  name: 'Océan',  color: '#0e4a57' },
+  { id: 'slate',  name: 'Ardoise', color: '#2c3038' },
+];
+
+const THEMES = [
+  { value: 'auto',  label: 'Comme le téléphone' },
+  { value: 'light', label: 'Clair' },
+  { value: 'dark',  label: 'Sombre' },
 ];
 
 const TX_TYPES = ['expense', 'income', 'transfer'];

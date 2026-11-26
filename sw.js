@@ -1,6 +1,6 @@
 // Permet à l'application de fonctionner sans connexion.
 // Pense à changer le numéro de version quand tu modifies les fichiers.
-const CACHE = 'mes-depenses-v7';
+const CACHE = 'mes-depenses-v8';
 const FILES = [
   './',
   './index.html',

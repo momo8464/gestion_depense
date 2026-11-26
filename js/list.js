@@ -88,8 +88,8 @@ function clearFilters() {
 
 function txSubtitle(t) {
   const parts = [];
-  if (t.type === 'transfer') parts.push(`${escapeHtml(accountLabel(t.accountId))} → ${escapeHtml(accountLabel(t.toAccountId))}`);
-  else if (multiAccounts()) parts.push(escapeHtml(accountLabel(t.accountId)));
+  if (t.type === 'transfer') parts.push(`${escapeHtml(account(t.accountId).name)} → ${escapeHtml(account(t.toAccountId).name)}`);
+  else if (multiAccounts()) parts.push(escapeHtml(account(t.accountId).name));
   if (t.recurringId) parts.push('🔁 Récurrent');
   if (t.photo) parts.push('📎 Ticket');
   if (t.note) parts.push(escapeHtml(t.note));

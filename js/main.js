@@ -7,6 +7,7 @@
 const TABS = ['list', 'stats', 'plus', 'settings'];
 
 function render() {
+  applyTheme();
   $('#monthLabel').textContent = monthLabel(view.month);
   for (const tab of TABS) $(`#tab-${tab}`).hidden = view.tab !== tab;
   document.querySelectorAll('.bottom button').forEach((b) => {
@@ -23,6 +24,17 @@ function render() {
   if (view.tab === 'plus') renderPlus();
   if (view.tab === 'settings') renderSettings();
   if (pendingToast) { toast(pendingToast); pendingToast = null; }
+}
+
+// Applique le thème (clair / sombre / auto) et la couleur d'encre choisis dans Réglages
+function applyTheme() {
+  const root = document.documentElement;
+  const { theme, ink } = state.settings;
+  if (theme === 'light' || theme === 'dark') root.dataset.theme = theme; else delete root.dataset.theme;
+  root.dataset.ink = INKS.some((i) => i.id === ink) ? ink : 'navy';
+  // couleur de la barre d'état du téléphone = couleur du fond
+  const paper = getComputedStyle(root).getPropertyValue('--paper').trim();
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', paper || '#f3f4ef');
 }
 
 // Aller à un onglet (et éventuellement à une sous-page de « Plus »)
@@ -67,6 +79,9 @@ function initMain() {
 }
 
 /* ---------- Démarrage ---------- */
+
+applyTheme(); // avant tout affichage, y compris l'écran du code PIN
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
 initDialog();
 initPhotos();

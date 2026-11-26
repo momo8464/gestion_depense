@@ -11,6 +11,7 @@ Les données restent sur le téléphone (aucun serveur, aucun compte).
 - Code PIN à l'ouverture (optionnel), avec verrouillage automatique en arrière-plan
 - Choix de la devise (€, FCFA, $, DH, DA, DT, CHF, £)
 - Export CSV (Excel), sauvegarde et restauration en fichier .json
+- Rappel de sauvegarde (chaque semaine, 15 jours ou mois), avec « Plus tard »
 - Thème clair ou sombre selon le téléphone
 
 ## Lancer sur le PC

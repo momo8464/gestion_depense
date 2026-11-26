@@ -184,6 +184,13 @@ main { max-width: 560px; margin: 0 auto; padding: 0 12px; }
 .actions { display: flex; gap: 8px; margin-top: 6px; }
 .actions .primary { flex: 1; }
 
+/* Rappel de sauvegarde */
+.reminder { border-left: 4px solid var(--brand); margin-top: 4px; }
+.reminder-text b { display: block; }
+.reminder-text small { color: var(--muted); }
+.reminder-actions { display: flex; gap: 8px; margin-top: 12px; }
+.reminder-actions .btn { flex: 1; padding: 10px; }
+
 /* Écran de verrouillage (code PIN) */
 .lock {
   position: fixed; inset: 0; z-index: 30;

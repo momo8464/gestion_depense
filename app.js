@@ -4,6 +4,21 @@
 
 const STORE_KEY = 'mes-depenses.v1';
 
+const DEFAULT_SETTINGS = {
+  currency: '€',
+  budget: 0,
+  reminderDays: 7,   // rappel de sauvegarde (0 = jamais)
+  lastBackup: 0,     // date de la dernière sauvegarde
+  backupSnooze: 0,   // « Plus tard » : pas de rappel avant cette date
+};
+
+const REMINDER_CHOICES = [
+  { value: 7,  label: 'Chaque semaine' },
+  { value: 14, label: 'Tous les 15 jours' },
+  { value: 30, label: 'Chaque mois' },
+  { value: 0,  label: 'Jamais' },
+];
+
 const CATEGORIES = {
   expense: [
     { id: 'food',      name: 'Courses',     icon: '🛒', color: '#16a34a' },
@@ -54,10 +69,10 @@ function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY));
     if (raw && Array.isArray(raw.tx)) {
-      return { tx: raw.tx, settings: { currency: '€', budget: 0, ...raw.settings } };
+      return { tx: raw.tx, settings: { ...DEFAULT_SETTINGS, ...raw.settings } };
     }
   } catch (_) { /* données illisibles : on repart de zéro */ }
-  return { tx: [], settings: { currency: '€', budget: 0 } };
+  return { tx: [], settings: { ...DEFAULT_SETTINGS } };
 }
 
 function save() {
@@ -185,7 +200,7 @@ function renderList() {
     if (!groups.has(t.date)) groups.set(t.date, []);
     groups.get(t.date).push(t);
   }
-  let html = '';
+  let html = backupBanner();
   for (const [date, items] of groups) {
     const dayTotal = totals(items).balance;
     html += `<div class="day"><span>${dayLabel(date)}</span><span>${fmt(dayTotal, true)}</span></div><div class="list">`;
@@ -305,8 +320,15 @@ function renderSettings() {
     </div>
     <div class="card">
       <h3>Sauvegarde</h3>
-      <p class="hint">Tes données restent uniquement sur ce téléphone. Fais une sauvegarde de temps en temps.</p>
-      <div class="btn-col">
+      <p class="hint">Tes données restent uniquement sur ce téléphone. Fais une sauvegarde de temps en temps.<br>
+        Dernière sauvegarde : <b>${lastBackupText()}</b></p>
+      <div class="setting">
+        <span>Me rappeler de sauvegarder</span>
+        <select id="sReminder">
+          ${REMINDER_CHOICES.map((c) => `<option value="${c.value}" ${c.value === Number(s.reminderDays) ? 'selected' : ''}>${c.label}</option>`).join('')}
+        </select>
+      </div>
+      <div class="btn-col" style="margin-top:10px">
         <button class="btn ghost" id="sExportCsv">📄 Exporter en tableur (CSV)</button>
         <button class="btn ghost" id="sBackup">💾 Sauvegarder (fichier .json)</button>
         <button class="btn ghost" id="sRestore">📂 Restaurer une sauvegarde</button>
@@ -425,7 +447,58 @@ function exportCsv() {
 }
 
 function backup() {
+  state.settings.lastBackup = Date.now();
+  state.settings.backupSnooze = 0;
+  save();
   download(`sauvegarde-depenses-${isoDate(new Date())}.json`, JSON.stringify(state, null, 2), 'application/json');
+  render();
+  toast('Sauvegarde enregistrée dans tes téléchargements');
+}
+
+/* ---------- Rappel de sauvegarde ---------- */
+
+function daysSince(ts) {
+  return Math.floor((Date.now() - ts) / 864e5);
+}
+
+function lastBackupText() {
+  const s = state.settings;
+  if (!s.lastBackup) return 'jamais';
+  const d = daysSince(s.lastBackup);
+  if (d === 0) return "aujourd'hui";
+  if (d === 1) return 'hier';
+  return `il y a ${d} jours`;
+}
+
+function backupDue() {
+  const s = state.settings;
+  if (!s.reminderDays || !state.tx.length) return false;  // rappel désactivé ou rien à sauvegarder
+  if (Date.now() < (s.backupSnooze || 0)) return false;   // « Plus tard » encore actif
+  // Jamais sauvegardé : on attend d'avoir quelques opérations pour ne pas déranger dès la première
+  if (!s.lastBackup) return state.tx.length >= 5;
+  return daysSince(s.lastBackup) >= s.reminderDays;
+}
+
+function backupBanner() {
+  if (!backupDue()) return '';
+  const text = state.settings.lastBackup
+    ? `Dernière sauvegarde : ${lastBackupText()}.`
+    : "Tu n'as encore jamais sauvegardé tes données.";
+  return `
+    <div class="card reminder" role="status">
+      <div class="reminder-text"><b>💾 Pense à sauvegarder</b><small>${text}</small></div>
+      <div class="reminder-actions">
+        <button class="btn ghost" data-action="snooze">Plus tard</button>
+        <button class="btn primary" data-action="backup">Sauvegarder</button>
+      </div>
+    </div>`;
+}
+
+function snoozeBackup() {
+  state.settings.backupSnooze = Date.now() + 864e5; // on redemande demain
+  save();
+  render();
+  toast('Rappel reporté à demain');
 }
 
 function restore(file) {
@@ -436,7 +509,7 @@ function restore(file) {
       if (!data || !Array.isArray(data.tx)) throw new Error('format');
       const valid = data.tx.filter((t) => t && t.id && t.date && typeof t.amount === 'number' && CATEGORIES[t.type]);
       if (!confirm(`Remplacer tes données actuelles par cette sauvegarde (${valid.length} opérations) ?`)) return;
-      state = { tx: valid, settings: { currency: '€', budget: 0, ...data.settings } };
+      state = { tx: valid, settings: { ...DEFAULT_SETTINGS, ...data.settings } };
       save();
       render();
       toast('Sauvegarde restaurée');
@@ -673,6 +746,9 @@ $('#fCats').addEventListener('click', (e) => {
 });
 
 $('#tab-list').addEventListener('click', (e) => {
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  if (action === 'backup') return backup();
+  if (action === 'snooze') return snoozeBackup();
   const b = e.target.closest('.tx');
   if (b) openForm(state.tx.find((t) => t.id === b.dataset.id));
 });
@@ -681,6 +757,12 @@ $('#tab-settings').addEventListener('change', (e) => {
   if (e.target.id === 'sCurrency') {
     state.settings.currency = e.target.value;
     save(); render();
+  }
+  if (e.target.id === 'sReminder') {
+    state.settings.reminderDays = Number(e.target.value);
+    state.settings.backupSnooze = 0;
+    save();
+    toast(state.settings.reminderDays ? 'Rappel enregistré' : 'Rappel désactivé');
   }
   if (e.target.id === 'sLockDelay' && pinData) {
     pinData.delay = Number(e.target.value);
